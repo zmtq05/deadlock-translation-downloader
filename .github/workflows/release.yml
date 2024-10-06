@@ -1,4 +1,4 @@
-name: Build and Release Executable
+name: Build and Release
 
 on:
   push:
@@ -7,51 +7,40 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    runs-on: windows-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          python -m venv venv
-          source venv/bin/activate
           pip install -r requirements.txt
-
-      - name: Install PyInstaller
-        run: |
           pip install pyinstaller
 
-      - name: Build executable with PyInstaller
-        run: |
-          pyinstaller -n deadlock-translation-downloader.exe --onefile main.py
-          ls dist  # 빌드된 파일 확인
+      - name: Build with PyInstaller
+        run: pyinstaller --onefile main.py
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: executable
-          path: dist/*
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: executable
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/*
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/main.exe
+          asset_name: deadlock translation downloader.exe
+          asset_content_type: application/octet-stream
