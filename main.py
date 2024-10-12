@@ -1,12 +1,16 @@
 import gdown
 import os
-import toml
-import requests
-from bs4 import BeautifulSoup
+import time
 
-config_file_path = "config.toml"
+dir = os.path.join(
+    os.getenv("LOCALAPPDATA", os.getcwd()), "Deadlock translation downloader"
+)
+os.makedirs(dir, exist_ok=True)
+game_path_fname = os.path.join(dir, "path.txt")
+translation_url = "https://drive.google.com/uc?id=1eYAZiLb6xmNQZw-sxh1mJWshTC6xHLJz"
+font_url = "https://drive.google.com/uc?id=1t2lh6KPnTkBoM_-PPFmx5CRBum-gLb31"
 
-if not os.path.exists(config_file_path):
+if not os.path.exists(game_path_fname):
     while True:
         game_path = input("Deadlock 폴더 위치: ")
         if not os.path.exists(game_path):
@@ -14,54 +18,27 @@ if not os.path.exists(config_file_path):
         else:
             break
 
-    config = {
-        "settings": {
-            "translation_post_url": "https://gall.dcinside.com/mgallery/board/view/?id=deadlock&no=1034",
-            "game_path": game_path,
-        }
-    }
-
-    with open(config_file_path, "w") as file:
-        toml.dump(config, file)
+    with open(game_path_fname, "w") as file:
+        file.write(game_path)
+        print(f"게임 경로가 {game_path_fname}에 저장됨")
 
 else:
-    with open(config_file_path, "r") as file:
-        config = toml.load(file)
-        game_path = config["settings"]["game_path"]
-
-translation_post_url = config["settings"]["translation_post_url"]
-
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36"
-}
-response = requests.get(translation_post_url, headers=headers)
-if response.status_code != 200:
-    input("게시글이 존재하지 않습니다. Enter를 눌러 종료")
-    exit()
-soup = BeautifulSoup(response.text, "html.parser")
-
-p_list = soup.select("#temp_og_paste_box p:has(a > span)")
-for p in p_list:
-    for sibling in p.next_siblings:
-        text = sibling.get_text()
-        if "번역" in text:
-            translation_url = p.get_text()
-            break
-        elif "맞춤" in text:
-            font_url = p.get_text()
-            break
+    with open(game_path_fname, "rt") as file:
+        game_path = file.read().rstrip()
 
 
-output = "translation.zip"
-print("번역 다운로드")
-gdown.download(translation_url, output=output, fuzzy=True)
-gdown.extractall(output, game_path)
-os.remove(output)
+def download(url, output, msg):
+    print(msg)
+    try:
+        gdown.download(url, output)
+        gdown.extractall(output, game_path)
+        if os.path.exists(output):
+            os.remove(output)
+        print("완료")
+    except Exception as e:
+        print(f"Error downloading {output}: {e}")
 
-output2 = "font.zip"
-print("맞춤 폰트 다운로드")
-gdown.download(font_url, output=output2, fuzzy=True)
-gdown.extractall(output2, game_path)
-os.remove(output2)
 
-input("Enter를 눌러 종료")
+timestamp = int(time.time())
+download(translation_url, f"translation_{timestamp}.zip", "번역 다운로드")
+download(font_url, f"font_{timestamp}.zip", "맞춤 폰트 다운로드")
