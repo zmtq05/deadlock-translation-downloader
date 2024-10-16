@@ -40,5 +40,5 @@ def download(url, output, msg):
 
 
 timestamp = int(time.time())
-download(translation_url, f"translation_{timestamp}.zip", "번역 다운로드")
 download(font_url, f"font_{timestamp}.zip", "맞춤 폰트 다운로드")
+download(translation_url, f"translation_{timestamp}.zip", "번역 다운로드")
